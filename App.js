@@ -49,26 +49,6 @@ export default function App() {
           <Text>{item.surf.min}</Text>
           <Text style={styles.waveItemTitle}>Surf max:</Text>
           <Text>{item.surf.max}</Text>
-{/*           {isExpanded && (
-            <>
-              <Text style={styles.waveItemTitle}>Swells:</Text>
-              <FlatList
-                data={item.swells}
-                renderItem={({ item }) => (
-                  <View style={styles.swellItem}>
-                    <Text style={styles.swellItemTitle}>Height:</Text>
-                    <Text>{item.height}</Text>
-                    <Text style={styles.swellItemTitle}>Period:</Text>
-                    <Text>{item.period}</Text>
-                    <Text style={styles.swellItemTitle}>Impact:</Text>
-                    <Text>{item.impact}</Text>
-                    <Text style={styles.swellItemTitle}>Direction:</Text>
-                    <Text>{item.direction}</Text>
-                  </View>
-                )}
-              />
-            </>
-          )} */}
         </View>
       </TouchableOpacity>
     );
