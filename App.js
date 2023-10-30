@@ -3,47 +3,62 @@ import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native
 
 const GOOD_WAVE_THRESHOLD = 1;
 
+// コンポーネントの定義
 export default function App() {
+  // Stateの初期化
   const [dailyData, setDailyData] = useState([]);
 
+  // APIからデータを取得し、コンポーネントがマウントされた後にデータを処理する
   useEffect(() => {
+    // APIからデータを取得
     fetch('https://services.surfline.com/kbyg/spots/forecasts/wave?spotId=5842041f4e65fad6a7708d9b')
       .then(response => response.json())
       .then(data => {
+        // 取得したデータを日ごとにグループ化
         const groupedByDay = groupDataByDay(data.data.wave);
+        // Stateを更新
         setDailyData(groupedByDay);
       })
-      .catch(error => console.error(error));
+      .catch(error => console.error(error)); // エラーハンドリング
   }, []);
 
   const groupDataByDay = data => {
-    const groupedData = {};
+    const groupedData = {}; // 日付ごとにグループ化されたデータを格納するオブジェクトを初期化します
     data.forEach(item => {
-      const timestampInMilliseconds = item.timestamp * 1000;
-      const date = new Date(timestampInMilliseconds).toLocaleDateString();
+      const timestampInMilliseconds = item.timestamp * 1000; // タイムスタンプをミリ秒に変換します
+      const date = new Date(timestampInMilliseconds).toLocaleDateString(); // タイムスタンプから日付を取得します
+  
+      // 同じ日付のデータをまとめるために、日付をキーとして使用し、それぞれの日付ごとに配列を作成します
       if (!groupedData[date]) {
         groupedData[date] = [];
       }
-      const isGood = item.surf.max >= GOOD_WAVE_THRESHOLD;
+  
+      // 予測データの各要素を取り出して、必要な情報を抽出して新たなオブジェクトとして追加します
+      const isGood = item.surf.max >= GOOD_WAVE_THRESHOLD; // 波の質が良いかどうかを確認します
       groupedData[date].push({
-        ...item,
-        timestamp: new Date(timestampInMilliseconds).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        isGood: isGood,
+        ...item, // 元のデータを展開
+        timestamp: new Date(timestampInMilliseconds).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), // タイムスタンプをhh:mm形式にフォーマットします
+        isGood: isGood, // 波が良いかどうかを追加します
       });
     });
+  
+    // グループ化されたデータを日付ごとのオブジェクトから配列の形式に変換して返します
     return Object.entries(groupedData).map(([date, forecasts]) => ({
-      date,
-      forecasts,
-      expanded: false,
+      date, // 日付
+      forecasts, // 予測データ
+      expanded: false, // 初期状態では展開されていない状態に設定
     }));
   };
+  
 
+  // エクスパンド/コラプスをトグルする関数
   const toggleExpansion = index => {
     const updatedData = [...dailyData];
     updatedData[index].expanded = !updatedData[index].expanded;
     setDailyData(updatedData);
   };
 
+  // 波のデータを表示する関数
   const renderWaveItem = ({ item, index }) => {
     return (
       <View style={styles.waveItem}>
@@ -74,6 +89,7 @@ export default function App() {
     );
   };
 
+  // コンポーネントのレンダリング
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Wave Forecast</Text>
@@ -87,6 +103,7 @@ export default function App() {
   );
 }
 
+// スタイルの定義
 const styles = StyleSheet.create({
   good: {
     color: 'red'
@@ -127,3 +144,4 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+
