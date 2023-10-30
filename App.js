@@ -1,56 +1,76 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 
-const GOOD_WAVE_THRESHOLD = 1; // Surf maxが1以上なら良い波と判断する
+const GOOD_WAVE_THRESHOLD = 1;
 
 export default function App() {
-  const [convertedData, setConvertedData] = useState([]);
-  const [expandedIds, setExpandedIds] = useState([]);
+  const [dailyData, setDailyData] = useState([]);
 
   useEffect(() => {
     fetch('https://services.surfline.com/kbyg/spots/forecasts/wave?spotId=5842041f4e65fad6a7708d9b')
       .then(response => response.json())
       .then(data => {
-        const convertedData = data.data.wave.map(item => {
-          const timestampInMilliseconds = item.timestamp * 1000; // timestampは秒単位なので、ミリ秒単位に変換する
-          const date = new Date(timestampInMilliseconds);
-          const isGood = item.surf.max >= GOOD_WAVE_THRESHOLD;
-          return {
-            ...item,
-            timestamp: date || new Date(), 
-            isGood: isGood
-          };
-        });
-        setConvertedData(convertedData);
+        const groupedByDay = groupDataByDay(data.data.wave);
+        setDailyData(groupedByDay);
       })
       .catch(error => console.error(error));
   }, []);
 
-  const toggleExpansion = id => {
-    if (expandedIds.includes(id)) {
-      setExpandedIds(expandedIds.filter(itemId => itemId !== id));
-    } else {
-      setExpandedIds([...expandedIds, id]);
-    }
+  const groupDataByDay = data => {
+    const groupedData = {};
+    data.forEach(item => {
+      const timestampInMilliseconds = item.timestamp * 1000;
+      const date = new Date(timestampInMilliseconds).toLocaleDateString();
+      if (!groupedData[date]) {
+        groupedData[date] = [];
+      }
+      const isGood = item.surf.max >= GOOD_WAVE_THRESHOLD;
+      groupedData[date].push({
+        ...item,
+        timestamp: new Date(timestampInMilliseconds).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        isGood: isGood,
+      });
+    });
+    return Object.entries(groupedData).map(([date, forecasts]) => ({
+      date,
+      forecasts,
+      expanded: false,
+    }));
   };
 
-  const renderWaveItem = ({ item }) => {
-    const isExpanded = expandedIds.includes(item.id);
+  const toggleExpansion = index => {
+    const updatedData = [...dailyData];
+    updatedData[index].expanded = !updatedData[index].expanded;
+    setDailyData(updatedData);
+  };
+
+  const renderWaveItem = ({ item, index }) => {
     return (
-      <TouchableOpacity onPress={() => toggleExpansion(item.id)}>
-        <View style={styles.waveItem}>
-          <Text style={styles.waveItemTitle}>Timestamp:</Text>
-          <Text>{item.timestamp.toString()}</Text>
-          <Text style={styles.waveItemTitle}>Is Good:</Text>
-          <Text style={item.isGood ? styles.good : styles.notGood}>
-            {item.isGood ? 'Yes' : 'No'}
-          </Text>
-          <Text style={styles.waveItemTitle}>Surf min:</Text>
-          <Text>{item.surf.min}</Text>
-          <Text style={styles.waveItemTitle}>Surf max:</Text>
-          <Text>{item.surf.max}</Text>
-        </View>
-      </TouchableOpacity>
+      <View style={styles.waveItem}>
+        <TouchableOpacity onPress={() => toggleExpansion(index)}>
+          <Text style={styles.waveItemTitle}>Date: {item.date}</Text>
+        </TouchableOpacity>
+        {item.expanded && (
+          <View>
+            <View style={styles.tableRow}>
+              <Text style={styles.tableHeader}>Timestamp</Text>
+              <Text style={styles.tableHeader}>Is Good</Text>
+              <Text style={styles.tableHeader}>wave min</Text>
+              <Text style={styles.tableHeader}>wave max</Text>
+            </View>
+            {item.forecasts.map(forecast => (
+              <View key={forecast.id} style={styles.tableRow}>
+                <Text>{forecast.timestamp}</Text>
+                <Text style={forecast.isGood ? styles.good : styles.notGood}>
+                  {forecast.isGood ? 'Yes' : 'No'}
+                </Text>
+                <Text>{forecast.surf.min}</Text>
+                <Text>{forecast.surf.max}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
     );
   };
 
@@ -58,10 +78,10 @@ export default function App() {
     <View style={styles.container}>
       <Text style={styles.title}>Wave Forecast</Text>
       <FlatList
-        data={convertedData}
+        data={dailyData}
         renderItem={renderWaveItem}
         style={{ marginTop: 20 }}
-        keyExtractor={item => item.id/* .toString() */}
+        keyExtractor={item => item.date}
       />
     </View>
   );
@@ -88,20 +108,22 @@ const styles = StyleSheet.create({
   },
   waveItem: {
     borderBottomWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#ccc', // テーブルの境界線の色
     marginBottom: 10,
+    padding: 5,
   },
   waveItemTitle: {
     fontWeight: 'bold',
     marginBottom: 5,
-    backgroundColor: '#ddd',  
+    backgroundColor: '#ddd',
+    padding: 5,
   },
-  swellItem: {
-    marginLeft: 20,
-    marginBottom: 5,
+  tableRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
-  swellItemTitle: {
+  tableHeader: {
     fontWeight: 'bold',
-    backgroundColor: '#ccc',
+    flex: 1,
   },
 });
